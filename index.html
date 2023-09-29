@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kitui ECDE Geo-Portal</title>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <link rel="stylesheet" href="Leaflet.Coordinates-0.1.5.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="kitui.png">
+    <link rel="stylesheet" href="L.Control.Layers.Tree.css" />
+    <link rel="stylesheet" href="Control.FullScreen.css" />
+    <link rel="stylesheet" href="leaflet-measure.css" />
+    <link rel="stylesheet" href="leaflet.zoomhome.css" />
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link href='https://api.mapbox.com/mapbox-gl-js/v3.0.0-beta.1/mapbox-gl.css' rel='stylesheet' />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.pm@latest/dist/leaflet.pm.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/gokertanrisever/leaflet-ruler@master/src/leaflet-ruler.css" integrity="sha384-P9DABSdtEY/XDbEInD3q+PlL+BjqPCXGcF8EkhtKSfSTr/dS5PBKa9+/PMkW2xsY" crossorigin="anonymous">
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+
+        .title-section {
+            background-color: #3498db;
+            color: #ffffff;
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo img {
+            height: 40px; /* Adjust the height as needed */
+            margin-right: 10px;
+        }
+
+        .title {
+            margin: 0;
+        }
+
+        .search-input-wrapper {
+            display: flex;
+            align-items: center;
+        }
+
+        #search-input {
+            padding: 5px;
+            margin-right: 5px;
+        }
+
+        #search-button {
+            padding: 5px;
+            background-color: #2ecc71;
+            color: #ffffff;
+            border: none;
+            cursor: pointer;
+        }
+
+        #inputID {
+            padding: 5px;
+            margin-right: 5px;
+        }
+
+        #find-button {
+            padding: 5px;
+            background-color: #e74c3c;
+            color: #ffffff;
+            border: none;
+            cursor: pointer;
+        }
+
+        @media (max-width: 600px) {
+            .title-section {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .search-input-wrapper {
+                margin-top: 10px;
+            }
+        }
+
+        .bg-primary-custom {
+            background-color: #3498db !important;
+        }
+        /* Custom CSS for Popup Styling */
+        .popup-container {
+            background-color: #ffffff;
+            border: 2px solid #3498db;
+            border-radius: 5px;
+            padding: 10px;
+            width: 300px;
+            text-align: left;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .popup-title {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #3498db;
+        }
+
+        .popup-content {
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .popup-button {
+            display: block;
+            background-color: #3498db;
+            color: #ffffff;
+            text-align: center;
+            padding: 5px 10px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+            .popup-button:hover {
+                background-color: #2980b9;
+            }
+    </style>
+</head>
+<body>
+    <div class="title-section">
+        <header>
+            <div class="container-fluid bg-primary-custom text-white p-3 d-flex align-items-center justify-content-between">
+                <div class="logo">
+                    <img src="kitui.png" alt="Kitui Logo" class="img-fluid" style="max-height: 40px;">
+                </div>
+                <h1 class="title"style="font-size:30px;"> | Kitui ECDE Schools Portal</h1>
+            </div>
+        </header>
+        <div class="search-input-wrapper">
+            <input type="text" id="search-input" placeholder="Search an ECDE School">
+            <button id="search-button"><i class="fa fa-search"></i></button>
+        </div>
+        <div>
+            <label for="inputID">Enter ECDE Name:</label>
+            <input type="text" id="inputID" />
+            <button id="find-button" onclick="filterNearestSchool()">Find the Nearest School</button>
+        </div>
+    </div>
+    <div id="map" style="width: 100%; height: 850px;"></div>
+    <!-- Leaflet JavaScript -->
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <!-- Leaflet-providers JavaScript for Google Satellite layer -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-providers/1.12.0/leaflet-providers.min.js"></script>
+    <script src="Leaflet.Coordinates-0.1.5.src.js"></script>
+    <script src="L.Control.Layers.Tree.js"></script>
+    <script src="Control.FullScreen.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/gokertanrisever/leaflet-ruler@master/src/leaflet-ruler.js" integrity="sha384-N2S8y7hRzXUPiepaSiUvBH1ZZ7Tc/ZfchhbPdvOE5v3aBBCIepq9l+dBJPFdo1ZJ" crossorigin="anonymous"></script>
+    <script src="leaflet-geojson-vt.js"></script>
+    <script src="spatial_join.js"></script>
+    <script src="primary.js"></script>
+    <script src="Leaflet.LocationShare.js"></script>
+    <script src="leaflet.browser.print.js"></script>
+    <script src="leaflet.zoomhome.min.js"></script>
+    <script src="https://unpkg.com/leaflet.pm@latest/dist/leaflet.pm.min.js"></script>
+    <script src="https://cdn.osmbuildings.org/classic/0.2.2b/OSMBuildings-Leaflet.js"></script>
+    <script src='https://api.mapbox.com/mapbox-gl-js/v3.0.0-beta.1/mapbox-gl.js'></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script src="https://unpkg.com/leaflet-pip@1.1.0/leaflet-pip.js"></script>
+    <script>
+        // Initialize the map
+        var map = L.map('map', { zoomControl: false }).setView([-1.23465, 37.91371], 12);
+
+        // Adding the satellite imagery basemap
+        var satelliteLayer = L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}', {
+            attribution: 'Map data &copy; <a href="https://www.mapbox.com/">Mapbox</a>',
+            maxZoom: 25,
+            id: 'mapbox/satellite-v9',
+            tileSize: 512,
+            zoomOffset: -1,
+            accessToken: 'pk.eyJ1Ijoic2ltaW9uMTIzIiwiYSI6ImNsZzZkaGJtcjBjZG8zcnFpcG1icHZ0MWEifQ.qs9HmzJglua2mUBOnoahQQ'
+        })
+
+        // Adding the OSM basemap
+        var osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors',
+            maxZoom: 25,
+        });
+
+        var EsriWorldTerrainLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Terrain_Base/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri &mdash; Source: USGS, Esri, TANA, DeLorme, and NPS',
+            maxZoom: 13
+        });
+
+        //OSM Building Data
+        var osmbLayer = new OSMBuildings(map).load('https://{s}.data.osmbuildings.org/0.2/anonymous/tile/{z}/{x}/{y}.json');
+
+
+        // Set the Mapbox basemap as the default basemap
+        osmLayer.addTo(map);
+
+        //Coordinates/ Mouse Position
+        L.control.coordinates({
+            position: "bottomright", //optional default "bottomright"
+            useDMS: true,
+            labelTemplateLat: "Latitude: {y}",
+            labelTemplateLng: "Longitude: {x}",
+            useLatLngOrder: true,
+        }).addTo(map);
+
+        //Scale Bar
+        L.control.scale().addTo(map);
+
+        var zoomHome = L.Control.zoomHome();
+        zoomHome.addTo(map);
+
+        // create a fullscreen button and add it to the map
+        L.control.fullscreen({
+            position: 'topright',
+            title: 'Show me the fullscreen !',
+            titleCancel: 'Exit fullscreen mode',
+            content: null,
+            forceSeparateButton: true,
+            fullscreenElement: false
+        }).addTo(map);
+
+        // Add the Measure Control
+        L.control.ruler({
+            position: 'bottomleft'
+        }).addTo(map);
+
+        // Define options for browser print control
+        var options = {
+            title: 'Print Map',
+            position: 'bottomleft'
+        };
+
+        // Create browser print control with options and add it to the map
+        var browserControl = L.control.browserPrint(options).addTo(map);
+
+        var options = {
+            position: 'bottomleft',
+            lengthUnit: {
+                factor: 0.539956803,    // from km to nm
+                display: 'meters',
+                decimal: 2
+            }
+        };
+
+        map.pm.addControls({
+            position: 'bottomright',
+            drawCircle: false,
+        });
+
+        // Define the "Mombasa Road" GeoJSON layer
+        // Create a custom icon using Font Awesome
+        var schoolIcon = L.divIcon({
+            className: 'custom-div-icon',
+            html: '<i class="fas fa-school fa-2x"></i>', // Use the Font Awesome school icon
+            iconSize: [32, 32], // Set the icon size (adjust as needed)
+            iconAnchor: [16, 32] // Set the anchor point (adjust as needed)
+        });
+
+        // Create a Leaflet GeoJSON layer for the school data and use the custom icon
+        var edceLayer = L.geoJSON(ecde, {
+            pointToLayer: function (feature, latlng) {
+                // Determine the marker color based on the 'Level' attribute
+                var markerColor = 'black'; // Default color for unknown levels
+                if (feature.properties.Level === 'ECDE') {
+                    markerColor = 'green';
+                }
+
+                // Create a custom icon with the selected color
+                var customIcon = L.divIcon({
+                    className: 'custom-div-icon',
+                    html: '<i class="fas fa-school fa-2x" style="color:' + markerColor + ';"></i>',
+                    iconSize: [32, 32],
+                    iconAnchor: [16, 32]
+                });
+
+                return L.marker(latlng, {
+                    icon: customIcon
+                });
+            },
+            style: function (feature) {
+                // Define a color mapping for different route names (for the GeoJSON style)
+                var color;
+                switch (feature.properties.Level) {
+                    case 'ECDE':
+                        color = 'brown';
+                        break;
+                    default:
+                        color = 'black'; // Default color for unknown routes
+                }
+
+                return {
+                    color: color,
+                    weight: 5,
+                    opacity: 1,
+                    dashArray: '5, 5'
+                };
+            },
+            onEachFeature: function (feature, layer) {
+                // Create a custom HTML content for the popup
+                var popupContent = `
+                                                        <div class="popup-container">
+                                                            <ul class="nav nav-tabs" id="myTabs">
+                                                                <li class="nav-item">
+                                                                    <a class="nav-link active" id="route-tab" data-toggle="tab" href="#ecde-content">ECDE</a>
+                                                                </li>
+                                                                <li class="nav-item">
+                                                                    <a class="nav-link" id="fiber-tab" data-toggle="tab" href="#level-content">Level</a>
+                                                                </li>
+                                                                <li class="nav-item">
+                                                                    <a class="nav-link" id="operator-tab" data-toggle="tab" href="#operator-content">Infrastacture</a>
+                                                                </li>
+                                                            </ul>
+
+                                                            <div class="tab-content">
+                                                                <div class="tab-pane fade show active" id="ecde-content">
+                                                                    <p class="popup-title">ECDE Information</p>
+                                                                    <p class="popup-content"><strong>ECDE Name:</strong> ${feature.properties.SCHOOL_NAM}</p>
+                                                                    <p class="popup-content"><strong>County:</strong> ${feature.properties.County}</p>
+                                                                    <p class="popup-content"><strong>District:</strong> ${feature.properties.DISTRICT}</p>
+                                                                    <p class="popup-content"><strong>Sub County:</strong> ${feature.properties.SUB_COUNTY}</p>
+                                                                    <p class="popup-content"><strong>Ward:</strong> ${feature.properties.Ward}</p>
+                                                                    <p class="popup-content"><strong>Nearest ECDE:</strong> ${feature.properties.TargetID}</p>
+                                                                    <p class="popup-content"><strong>Distance (Meters):</strong> ${feature.properties.Distance}</p>
+                                                                    <!-- Add more route attributes here -->
+                                                                </div>
+                                                                <div class="tab-pane fade" id="level-content">
+                                                                    <p class="popup-title">Level Information</p>
+                                                                    <p class="popup-content"><strong>ECDE Level:</strong> ${feature.properties.Level}</p>
+                                                                    <p class="popup-content"><strong>Status:</strong> ${feature.properties.Status}</p>
+                                                                    <p class="popup-content"><strong>Students Capacity:</strong> ${feature.properties.CAPACITY_OF_STUDENTS_PER_SCHOOL}</p>
+                                                                    <!-- Add more fiber attributes here -->
+                                                                </div>
+                                                                <div class="tab-pane fade" id="operator-content">
+                                                                    <p class="popup-title">Infrastacture Information</p>
+                                                                    <p class="popup-content"><strong>Infrastacture:</strong> ${feature.properties.INFRASTRUCTURE_TYPE}</p>
+                                                                    <p class="popup-content"><strong>Remarks:</strong> ${feature.properties.Comments}</p>
+                                                                    <!-- Add more operator attributes here -->
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    `;
+
+                layer.bindPopup(popupContent);
+            }
+        }).addTo(map);
+
+       // Define variables for input and target schools
+       var inputSchool = null;
+        var targetSchool = null;
+
+        // Enable searching when pressing Enter
+        document.getElementById('inputID').addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                filterNearestSchool();
+            }
+        });
+
+        // Define a function to filter and display the nearest school
+        function filterNearestSchool() {
+            var targetInputID = document.getElementById('inputID').value;
+
+            // Clear the map of any previous markers and lines
+            if (inputSchool) {
+                map.removeLayer(inputSchool.marker);
+                inputSchool = null;
+            }
+            if (targetSchool) {
+                map.removeLayer(targetSchool.marker);
+                map.removeLayer(targetSchool.line);
+                targetSchool = null;
+            }
+
+            var targetFound = false;
+
+            // Find the input school based on the inputID
+            edceLayer.eachLayer(function (layer) {
+                var inputID = layer.feature.properties.InputID;
+                var targetID = layer.feature.properties.TargetID;
+                var distance = layer.feature.properties.Distance;
+                var schoolName = layer.feature.properties.SCHOOL_NAM; // Extract school name
+
+                // Check if the current feature matches the target InputID
+                if (schoolName === targetInputID) {
+                    // Create a blue flag icon for the input school
+                    createSchoolMarker(layer, 'blue', 'Searched School');
+
+                    // Use the school name to find the target value
+                    edceLayer.eachLayer(function (targetLayer) {
+                        if (targetLayer.feature.properties.SCHOOL_NAM === targetID) {
+                            // Create a red flag icon for the target school
+                            createSchoolMarker(targetLayer, 'red', 'Nearest ECDE School');
+
+                            // Create a dotted blue line between input and target schools
+                            var latlngs = [inputSchool.latlng, targetSchool.latlng];
+                            targetSchool.line = L.polyline(latlngs, { color: 'blue', dashArray: '5, 5', weight: 3 }).addTo(map);
+
+                            targetFound = true;
+                        }
+                    });
+                }
+            });
+
+            if (!targetFound) {
+                // Display a "Not Found" message
+                alert("ECDE School with School Name '" + targetInputID + "' not found.");
+            } else {
+                // Zoom in to the bounds of the input and target schools if both are found
+                var bounds = L.latLngBounds([inputSchool.latlng, targetSchool.latlng]);
+                map.fitBounds(bounds);
+            }
+        }
+
+        // Function to create a school marker
+        function createSchoolMarker(layer, color, label) {
+            var schoolIcon = L.divIcon({
+                className: 'custom-div-icon',
+                html: `<div style="color: ${color}; font-weight: bold;" class="custom-icon"><i class="fas fa-flag"></i> ${label}</div>`,
+                iconSize: [32, 32],
+                iconAnchor: [30, 32]
+            });
+
+            var school = {
+                latlng: [layer.feature.geometry.coordinates[1], layer.feature.geometry.coordinates[0]],
+                distance: layer.feature.properties.Distance,
+                marker: L.marker([layer.feature.geometry.coordinates[1], layer.feature.geometry.coordinates[0]], {
+                    icon: schoolIcon
+                }).addTo(map)
+            };
+
+            // Customize the popup for the school marker
+            var popupContent = '<div style="text-align: center;">' +              
+                `<strong>Distance:</strong> ${school.distance.toFixed(2)} meters` +
+                '</div>';
+
+            school.marker.bindPopup(popupContent, {
+                maxWidth: 200, // Maximum width of the popup
+                closeButton: false, // Remove the close button
+            });
+
+            if (label === 'Searched School') {
+                inputSchool = school;
+            } else {
+                targetSchool = school;
+            }
+        }
+
+
+        // Create a custom icon using Font Awesome
+        var schoolIcon = L.divIcon({
+            className: 'custom-div-icon',
+            html: '<i class="fas fa-school fa-2x"></i>', // Use the Font Awesome school icon
+            iconSize: [32, 32], // Set the icon size (adjust as needed)
+            iconAnchor: [16, 32] // Set the anchor point (adjust as needed)
+        });
+
+        // Create a Leaflet GeoJSON layer for the school data and use the custom icon
+        var primaryLayer = L.geoJSON(primary, {
+            pointToLayer: function (feature, latlng) {
+                // Use the custom school icon for each school point
+                return L.marker(latlng, {
+                    icon: schoolIcon
+                });
+            },
+            style: {
+                color: 'brown',
+                weight: 3,
+                opacity: 1
+            }
+        });
+
+        // Create groups for organizing the layers
+        var groupedOverlays = {
+            "Basemaps": {
+                "Satellite": satelliteLayer,
+                "OpenStreetMap": osmLayer,
+                "Esri_World_Terrain": EsriWorldTerrainLayer,
+                "OSM_3D_Buildings": osmbLayer
+            },
+            /*"Locations": {
+                "Population": populationLayer,
+                "WealthIndex": rwiLayer,
+                "Stops": stopsLayer,
+                "Routes": routesLayer,
+            },  */
+            "edce": {
+                "EDCEs": edceLayer,
+                "Primary": primaryLayer
+            }
+        };
+
+        // Create the updated overlaysTree hierarchy
+        var overlaysTree = {
+            label: 'Base Layers',
+            selectAllCheckbox: 'Un/select all',
+            children: [
+                {
+                    label: 'Basemaps',
+                    selectAllCheckbox: 'Un/select all',
+                    collapsed: true,
+                    children: [
+                        {
+                            label: 'Google Satellite',
+                            layer: groupedOverlays.Basemaps.Satellite,
+                        }, {
+                            label: 'OpenStreetMap',
+                            layer: groupedOverlays.Basemaps.OpenStreetMap,
+                        }, {
+                            label: 'Esri World Terrain',
+                            layer: groupedOverlays.Basemaps.Esri_World_Terrain
+                        }, {
+                            label: 'OSM 3D Buildings',
+                            layer: groupedOverlays.Basemaps.OSM_3D_Buildings,
+                            checked: true // Add this line to make the checkbox checked by default
+                        }
+                    ]
+                }, {
+                    "EDCEs": edceLayer,
+                    label: 'EDCEs',
+                    selectAllCheckbox: 'Un/select all',
+                    collapsed: true,
+                    children: [
+
+                        {
+                            label: 'ECDE Schools',
+                            layer: edceLayer // Assuming 'edceLayer' is for ECDE schools
+                        },
+                        {
+                            label: 'Primary Schools',
+                            layer: primaryLayer // Assuming you have a 'primaryLayer' variable for PRIMARY schools
+                        },
+
+                    ]
+                }
+            ]
+        };
+
+        // Create a control layer with the tree structure for overlays
+        var treeControl = L.control.layers.tree(null, overlaysTree, {
+            collapsed: false, // Set to true to initially collapse the tree
+        }).addTo(map);
+
+
+            //nearLayer.addTo(map);
+        /*stopsLayer.addTo(map);
+        routesLayer.addTo(map);*/
+    </script>
+</body>
+</html>
+
